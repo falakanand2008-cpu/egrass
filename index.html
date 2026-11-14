@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>E-Grass Power Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a plant-room schematic up top (the student's own design, animated), a control desk beside it, then the energy ledger and a grass-vs-coal comparison. */
+:root {
+  --bg: #f2f4ef;
+  --panel: #ffffff;
+  --ink: #18221b;
+  --muted: #5d6b61;
+  --line: #d3dbd3;
+  --grass: #2f7a3e;
+  --grass-soft: #dcebdc;
+  --flame: #e0601c;
+  --steam: #2f78c0;
+  --steam-soft: #d9e7f5;
+  --coal: #4a4f55;
+  --lit: #f3c33b;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111713; --panel: #18211b; --ink: #e5ede6; --muted: #98a89c; --line: #2c3a30;
+  --grass: #5cbf6d; --grass-soft: #1d3523; --flame: #ff8a4c; --steam: #6aaef0; --steam-soft: #1a2c40;
+  --coal: #9aa1a8; --lit: #f6d067; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #111713; --panel: #18211b; --ink: #e5ede6; --muted: #98a89c; --line: #2c3a30;
+  --grass: #5cbf6d; --grass-soft: #1d3523; --flame: #ff8a4c; --steam: #6aaef0; --steam-soft: #1a2c40;
+  --coal: #9aa1a8; --lit: #f6d067; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-block: 32px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 28px; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(34px, 6vw, 58px); font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+h2 { font-size: 23px; font-weight: 800; }
+h3 { font-size: 16px; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px 40px; align-items: end; }
+header .lede { max-width: 60ch; color: var(--muted); margin-top: 12px; font-size: 17px; }
+header .lede b { color: var(--ink); }
+.byline { font-size: 14px; color: var(--muted); text-align: right; }
+.byline b { display: block; color: var(--ink); font-size: 16px; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.plant { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px); gap: 20px; }
+
+.schematic { width: 100%; max-width: 100%; }
+.schematic svg { width: 100%; height: auto; display: block; }
+.schematic text { font-family: var(--f-mono); font-size: 13px; fill: var(--muted); }
+.schematic .lbl-strong { fill: var(--ink); font-weight: 600; }
+.status { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; color: var(--muted); }
+.status .mono { color: var(--ink); }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; background: var(--grass-soft); color: var(--grass); }
+.pill.pop { background: var(--steam-soft); color: var(--steam); }
+
+.ctrl { display: flex; flex-direction: column; gap: 5px; }
+.ctrl .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ctrl label { font-weight: 600; font-size: 15px; }
+.ctrl .val { font-family: var(--f-mono); font-size: 14px; color: var(--grass); }
+.ctrl .hint { font-size: 13px; color: var(--muted); line-height: 1.4; }
+input[type=range] { width: 100%; accent-color: var(--grass); }
+select { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+button { font: inherit; font-weight: 700; padding: 10px 16px; border-radius: 6px; border: 1px solid var(--grass); background: var(--grass); color: var(--panel); cursor: pointer; }
+button.ghost { background: transparent; color: var(--grass); }
+select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--steam); outline-offset: 2px; }
+
+.ledger { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.metric { border-top: 3px solid var(--grass); padding-top: 10px; display: flex; flex-direction: column; gap: 2px; }
+.metric.e { border-top-color: var(--steam); }
+.metric.h { border-top-color: var(--lit); }
+.metric.c { border-top-color: var(--coal); }
+.metric .num { font-family: var(--f-mono); font-size: clamp(24px, 3.4vw, 34px); font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.metric .unit { font-size: 14px; color: var(--muted); }
+.metric .sub { font-size: 13px; color: var(--muted); }
+
+.compare { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; }
+.bars { display: flex; flex-direction: column; gap: 14px; }
+.bar-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; align-items: center; }
+.bar-row .name { font-weight: 600; font-size: 15px; }
+.bar-track { background: var(--bg); border-radius: 4px; height: 34px; position: relative; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; min-width: 0; }
+.bar-fill span { font-family: var(--f-mono); font-size: 13px; font-weight: 600; color: var(--panel); white-space: nowrap; }
+.bar-fill.grass { background: var(--grass); }
+.bar-fill.coal { background: var(--coal); }
+.note { font-size: 14px; color: var(--muted); border-left: 3px solid var(--grass); padding-left: 12px; }
+.note b { color: var(--ink); }
+
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.steps .panel p { color: var(--muted); font-size: 15px; }
+.eq { font-family: var(--f-mono); font-size: 13px; background: var(--bg); padding: 10px 12px; border-radius: 6px; overflow-x: auto; white-space: pre; color: var(--ink); }
+table.crops { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.crops th, table.crops td { text-align: left; padding: 7px 10px 7px 0; border-bottom: 1px solid var(--line); }
+table.crops th { font-weight: 600; color: var(--muted); font-size: 13px; }
+table.crops td.n { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.tablebox { overflow-x: auto; }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; display: flex; flex-direction: column; gap: 6px; }
+footer a { color: var(--steam); }
+
+@media (max-width: 900px) {
+  .plant, .compare { grid-template-columns: minmax(0, 1fr); }
+  .ledger { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .steps { grid-template-columns: minmax(0, 1fr); }
+  header { grid-template-columns: minmax(0, 1fr); }
+  .byline { text-align: left; }
+}
+@media (max-width: 440px) { .bar-row { grid-template-columns: 84px minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .bar-fill { transition: none; } }
+</style>
+</head>
+<body style="margin:0">
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Biomass power · 3rd place, GIC sustainable energy competition</div>
+      <h1>E-Grass Power Lab</h1>
+      <p class="lede">A working model of my <b>E-Grass System</b>: a power plant that burns elephant grass instead of coal, with a pressure cap that pops like a popcorn kernel to release steam into the turbine. Set the fuel and the cap pressure, watch the plant run, and see how many homes it can power.</p>
+    </div>
+    <div class="byline"><b>Falak Anand</b>Honours Computer Engineering, University of Waterloo<br>Original design: GIC project (team), 2024 · Interactive model: 2026</div>
+  </header>
+
+  <section class="plant" aria-label="Plant schematic and controls">
+    <div class="panel">
+      <div class="status">
+        <span id="phase" class="pill">Heating</span>
+        <span>Boiler pressure <span class="mono" id="pNow">0.0</span> bar</span>
+        <span>Cap pops at <span class="mono" id="pSet">20</span> bar</span>
+        <span>Pops so far <span class="mono" id="pops">0</span></span>
+      </div>
+      <div class="schematic">
+        <svg viewBox="0 0 760 430" role="img" aria-label="Animated schematic of the E-Grass power plant">
+          <!-- CO2 exhaust with filter -->
+          <path d="M40 40 L130 40 L98 92 L72 92 Z" fill="none" stroke="var(--coal)" stroke-width="3"/>
+          <rect x="70" y="92" width="30" height="190" fill="none" stroke="var(--coal)" stroke-width="3"/>
+          <g id="filter">
+            <line x1="72" y1="130" x2="98" y2="130" stroke="var(--grass)" stroke-width="3" stroke-dasharray="4 3"/>
+            <line x1="72" y1="150" x2="98" y2="150" stroke="var(--grass)" stroke-width="3" stroke-dasharray="4 3"/>
+          </g>
+          <path d="M100 282 L200 282" stroke="var(--coal)" stroke-width="3" fill="none"/>
+          <g id="smoke"></g>
+          <text x="20" y="25">CO₂ exhaust + filters</text>
+
+          <!-- Grass burner -->
+          <rect x="200" y="300" width="130" height="62" rx="4" fill="var(--grass-soft)" stroke="var(--grass)" stroke-width="3"/>
+          <g id="grass"></g>
+          <g id="flames"></g>
+          <text x="210" y="385" class="lbl-strong">Elephant grass</text>
+
+          <!-- Water container / boiler -->
+          <ellipse cx="265" cy="205" rx="92" ry="95" fill="var(--steam-soft)" stroke="var(--steam)" stroke-width="3"/>
+          <rect id="waterLevel" x="175" y="205" width="180" height="100" fill="var(--steam)" opacity="0.35" clip-path="url(#boilerClip)"/>
+          <clipPath id="boilerClip"><ellipse cx="265" cy="205" rx="90" ry="93"/></clipPath>
+          <text x="210" y="210" class="lbl-strong">Water container</text>
+          <!-- pressure gauge -->
+          <circle cx="335" cy="140" r="20" fill="var(--panel)" stroke="var(--ink)" stroke-width="2"/>
+          <line id="needle" x1="335" y1="140" x2="335" y2="124" stroke="var(--flame)" stroke-width="3" stroke-linecap="round"/>
+
+          <!-- Organic cap -->
+          <g id="cap"><rect x="226" y="98" width="78" height="12" rx="6" fill="var(--ink)"/></g>
+          <text x="280" y="84">Organic cap</text>
+          <text x="280" y="100">("popcorn" valve)</text>
+
+          <!-- Steam pipe to turbine -->
+          <path id="steamPath" d="M265 98 L265 60 L480 60 L480 85" fill="none" stroke="var(--muted)" stroke-width="10" stroke-linejoin="round" opacity="0.35"/>
+          <g id="steam"></g>
+
+          <!-- Turbine -->
+          <rect x="440" y="85" width="140" height="80" rx="6" fill="none" stroke="var(--ink)" stroke-width="3"/>
+          <g id="rotor" transform="translate(510 125)">
+            <line x1="-32" y1="0" x2="32" y2="0" stroke="var(--ink)" stroke-width="3"/>
+            <line x1="0" y1="-32" x2="0" y2="32" stroke="var(--ink)" stroke-width="3"/>
+            <line x1="-22" y1="-22" x2="22" y2="22" stroke="var(--ink)" stroke-width="3"/>
+            <line x1="-22" y1="22" x2="22" y2="-22" stroke="var(--ink)" stroke-width="3"/>
+            <circle r="6" fill="var(--ink)"/>
+          </g>
+          <text x="470" y="185" class="lbl-strong">Turbine</text>
+          <line x1="580" y1="125" x2="610" y2="125" stroke="var(--ink)" stroke-width="4"/>
+
+          <!-- Magnet / generator -->
+          <rect x="610" y="95" width="80" height="60" rx="6" fill="none" stroke="var(--ink)" stroke-width="3"/>
+          <rect x="622" y="110" width="26" height="30" fill="var(--flame)" opacity="0.8"/>
+          <rect x="652" y="110" width="26" height="30" fill="var(--steam)" opacity="0.8"/>
+          <text x="618" y="85" class="lbl-strong">Magnet</text>
+
+          <!-- Wire to houses -->
+          <path id="wire" d="M650 155 L650 262 L780 262" fill="none" stroke="var(--lit)" stroke-width="4"/>
+          <g id="houses"></g>
+          <text x="610" y="400" class="lbl-strong">Homes</text>
+
+          <!-- Condenser + water tank loop -->
+          <path d="M540 165 L540 330" stroke="var(--muted)" stroke-width="6" fill="none" opacity="0.5"/>
+          <rect x="505" y="330" width="70" height="50" rx="4" fill="none" stroke="var(--steam)" stroke-width="3"/>
+          <text x="500" y="400" class="lbl-strong">Condenser</text>
+          <rect x="380" y="220" width="100" height="160" rx="4" fill="none" stroke="var(--ink)" stroke-width="3"/>
+          <rect x="383" y="290" width="94" height="87" fill="var(--steam)" opacity="0.3"/>
+          <text x="395" y="262" class="lbl-strong">Water tank</text>
+          <path d="M505 360 L480 360" stroke="var(--steam)" stroke-width="5"/>
+          <path d="M380 240 L352 240" stroke="var(--steam)" stroke-width="5"/>
+          <g id="drops"></g>
+        </svg>
+      </div>
+      <p class="status">Water from the tank fills the container. Burning grass heats it until the steam pressure pops the organic cap. Steam spins the turbine, the turbine spins the magnet, and the wire carries electricity to the homes. The condenser turns steam back into water for the tank.</p>
+    </div>
+
+    <div class="panel">
+      <div>
+        <div class="eyebrow">Control desk</div>
+        <h2>Run the plant</h2>
+      </div>
+      <div class="ctrl">
+        <label for="fuel">Fuel</label>
+        <select id="fuel">
+          <option value="eg">Elephant grass (dried)</option>
+          <option value="rh">Rice husk</option>
+          <option value="bg">Sugarcane bagasse</option>
+          <option value="wc">Wood chips</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="tpd">Fuel burned per day</label><span class="val" id="tpdV"></span></div>
+        <input type="range" id="tpd" min="1" max="500" step="1">
+        <div class="hint">Tonnes per day, as delivered to the plant.</div>
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="moist">Moisture content</label><span class="val" id="moistV"></span></div>
+        <input type="range" id="moist" min="0.05" max="0.6" step="0.01">
+        <div class="hint">Wet fuel wastes energy boiling off its own water.</div>
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="cap">Cap pop pressure</label><span class="val" id="capV"></span></div>
+        <input type="range" id="cap" min="5" max="60" step="1">
+        <div class="hint">A stronger cap holds more pressure, which makes the turbine more efficient.</div>
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="home">Electricity per home</label><span class="val" id="homeV"></span></div>
+        <input type="range" id="home" min="3" max="60" step="1">
+        <div class="hint">kWh per home per day. Canada is about 30, India about 3 to 4.</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button id="runBtn">Pause plant</button>
+        <button id="resetBtn" class="ghost">Reset</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Daily output">
+    <div>
+      <div class="eyebrow">Every day, this plant makes</div>
+    </div>
+    <div class="ledger">
+      <div class="metric e"><div class="num" id="mwh">–</div><div class="unit">MWh of electricity</div><div class="sub" id="mw">–</div></div>
+      <div class="metric h"><div class="num" id="homes">–</div><div class="unit">homes powered</div><div class="sub" id="homesSub">–</div></div>
+      <div class="metric c"><div class="num" id="coalT">–</div><div class="unit">tonnes of coal replaced</div><div class="sub">at a 33% efficient coal plant</div></div>
+      <div class="metric"><div class="num" id="co2T">–</div><div class="unit">tonnes CO₂ avoided</div><div class="sub" id="landSub">–</div></div>
+    </div>
+  </section>
+
+  <section class="compare" aria-label="Grass versus coal">
+    <div class="panel">
+      <div>
+        <div class="eyebrow">Same electricity, two fuels</div>
+        <h2>Life-cycle CO₂ per day</h2>
+      </div>
+      <div class="bars">
+        <div class="bar-row"><div class="name">Coal plant</div><div class="bar-track"><div class="bar-fill coal" id="barCoal"><span id="barCoalT"></span></div></div></div>
+        <div class="bar-row"><div class="name">E-Grass</div><div class="bar-track"><div class="bar-fill grass" id="barGrass"><span id="barGrassT"></span></div></div></div>
+      </div>
+      <p class="note"><b>Why grass is so much lower:</b> the CO₂ released when the grass burns was pulled out of the air while it grew, so it is close to carbon-neutral. The remaining emissions come from farming, drying and transport. The filters in my design clean the exhaust of soot and particles, which protects people's lungs.</p>
+    </div>
+    <div class="panel">
+      <div>
+        <div class="eyebrow">Why elephant grass</div>
+        <h2>Fuel comparison</h2>
+      </div>
+      <div class="tablebox">
+        <table class="crops">
+          <thead><tr><th>Fuel</th><th>Energy (dry)</th><th>Typical moisture</th></tr></thead>
+          <tbody>
+            <tr><td>Elephant grass</td><td class="n">16 MJ/kg</td><td class="n">15–20% (dried)</td></tr>
+            <tr><td>Rice husk</td><td class="n">14 MJ/kg</td><td class="n">10%</td></tr>
+            <tr><td>Sugarcane bagasse</td><td class="n">18 MJ/kg</td><td class="n">50%</td></tr>
+            <tr><td>Wood chips</td><td class="n">19 MJ/kg</td><td class="n">35%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Elephant grass grows fast, about <b>26 tonnes of dry matter per hectare per year</b> on average, regrows after cutting, and does well on poor land in hot countries. Waste fuels like rice husk and bagasse are limited by how much rice or sugar is produced.</p>
+    </div>
+  </section>
+
+  <section class="steps" aria-label="How the model works">
+    <div class="panel">
+      <h3>1 · Energy in the fuel</h3>
+      <p>Wet fuel has less usable energy, because some of the heat goes into boiling off its water.</p>
+      <div class="eq">LHV_wet = LHV_dry·(1 − M) − 2.44·M   [MJ/kg]</div>
+    </div>
+    <div class="panel">
+      <h3>2 · Steam to electricity</h3>
+      <p>Higher steam pressure gives a more efficient steam cycle. This model ranges from about 14% at 5 bar to about 27% at 60 bar, typical for small biomass plants.</p>
+      <div class="eq">kWh/day = tonnes·1000·LHV_wet·η / 3.6</div>
+    </div>
+    <div class="panel">
+      <h3>3 · Compared with coal</h3>
+      <p>Coal replaced uses 24 MJ/kg coal at 33% efficiency. CO₂ uses IPCC life-cycle medians: 820 g/kWh for coal, 230 g/kWh for dedicated biomass.</p>
+      <div class="eq">CO₂ avoided = kWh·(820 − 230) g</div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Built by Falak Anand. Based on the E-Grass System, a team project that won 3rd place at the GIC sustainable energy competition. All figures are estimates for learning purposes.</span>
+    <span>Data: Napier grass energy and yield from <a href="https://www.frontiersin.org/articles/10.3389/fpls.2023.1269976/full" target="_blank" rel="noopener">Frontiers in Plant Science (2023)</a>; life-cycle CO₂ from IPCC AR5 WG III, Annex III (2014).</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const NS = "http://www.w3.org/2000/svg";
+  const FUELS = {
+    eg: { name: "Elephant grass", lhv: 16, m: 0.18 },
+    rh: { name: "Rice husk", lhv: 14, m: 0.10 },
+    bg: { name: "Sugarcane bagasse", lhv: 18, m: 0.50 },
+    wc: { name: "Wood chips", lhv: 19, m: 0.35 }
+  };
+  const st = { fuel: "eg", tpd: 100, m: 0.18, cap: 20, home: 30, running: true };
+  const fmt = (v, d = 0) => v.toLocaleString("en-CA", { maximumFractionDigits: d, minimumFractionDigits: d });
+
+  // efficiency vs cap pressure: 14% at 5 bar to 27% at 60 bar, log-shaped
+  const eta = p => 0.14 + 0.13 * Math.log(p / 5) / Math.log(60 / 5);
+
+  function calc() {
+    const f = FUELS[st.fuel];
+    const lhvWet = Math.max(0, f.lhv * (1 - st.m) - 2.44 * st.m);       // MJ/kg
+    const kwh = st.tpd * 1000 * lhvWet * eta(st.cap) / 3.6;             // kWh/day
+    const homes = kwh / st.home;
+    const coalT = kwh * 3.6 / (0.33 * 24) / 1000;                       // tonnes coal/day
+    const co2Coal = kwh * 0.820 / 1000, co2Grass = kwh * 0.230 / 1000;  // tonnes/day
+    const dryTyr = st.tpd * (1 - st.m) * 365;
+    const hectares = dryTyr / 26;
+    return { lhvWet, kwh, homes, coalT, co2Coal, co2Grass, hectares, eta: eta(st.cap) };
+  }
+
+  function render() {
+    const r = calc();
+    $("tpdV").textContent = st.tpd + " t";
+    $("moistV").textContent = Math.round(st.m * 100) + "%";
+    $("capV").textContent = st.cap + " bar";
+    $("homeV").textContent = st.home + " kWh";
+    $("pSet").textContent = st.cap;
+    $("mwh").textContent = fmt(r.kwh / 1000, r.kwh < 10000 ? 1 : 0);
+    $("mw").textContent = "≈ " + fmt(r.kwh / 24 / 1000, 1) + " MW running all day · " + Math.round(r.eta * 100) + "% efficient";
+    $("homes").textContent = fmt(r.homes);
+    $("homesSub").textContent = "at " + st.home + " kWh per home per day";
+    $("coalT").textContent = fmt(r.coalT, 1);
+    $("co2T").textContent = fmt(r.co2Coal - r.co2Grass, 1);
+    $("landSub").textContent = st.fuel === "eg" ? "needs ≈ " + fmt(r.hectares) + " hectares of grass" : "compared with burning coal";
+    const max = r.co2Coal || 1;
+    $("barCoal").style.width = "100%"; $("barCoalT").textContent = fmt(r.co2Coal, 1) + " t";
+    $("barGrass").style.width = Math.max(12, (r.co2Grass / max) * 100) + "%"; $("barGrassT").textContent = fmt(r.co2Grass, 1) + " t";
+    buildHouses(r.homes);
+  }
+
+  // ---------- Schematic drawing ----------
+  function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; }
+  (function grass() { const g = $("grass"); for (let i = 0; i < 22; i++) { const x = 208 + i * 5.6; el("path", { d: `M${x} 358 Q${x + 4} ${330 - (i % 4) * 6} ${x + (i % 2 ? 7 : -3)} ${318 + (i % 3) * 5}`, stroke: "var(--grass)", "stroke-width": 2.5, fill: "none" }, g); } })();
+  const flames = []; (function () { const g = $("flames"); for (let i = 0; i < 6; i++) flames.push(el("path", { fill: "var(--flame)", opacity: 0.85 }, g)); })();
+  const houses = [];
+  function buildHouses(n) {
+    const g = $("houses"); if (houses.length) return litHouses(n);
+    for (let i = 0; i < 6; i++) {
+      const x = 600 + (i % 3) * 52, y = 270 + Math.floor(i / 3) * 62;
+      const h = el("g", {}, g);
+      el("path", { d: `M${x} ${y + 18} L${x + 20} ${y} L${x + 40} ${y + 18} Z`, fill: "var(--ink)" }, h);
+      el("rect", { x: x + 4, y: y + 18, width: 32, height: 24, fill: "none", stroke: "var(--ink)", "stroke-width": 2.5 }, h);
+      const w = el("rect", { x: x + 14, y: y + 24, width: 12, height: 11, fill: "var(--line)" }, h);
+      houses.push(w);
+    }
+    litHouses(n);
+  }
+  let litCount = 6;
+  function litHouses(n) { litCount = n <= 0 ? 0 : Math.max(1, Math.min(6, Math.ceil(Math.log10(n + 1) * 1.5))); }
+
+  const steam = []; (function () { const g = $("steam"); for (let i = 0; i < 14; i++) steam.push(el("circle", { r: 5, fill: "var(--steam)", opacity: 0 }, g)); })();
+  const smoke = []; (function () { const g = $("smoke"); for (let i = 0; i < 6; i++) smoke.push(el("circle", { r: 6, fill: "var(--muted)", opacity: 0 }, g)); })();
+  const drops = []; (function () { const g = $("drops"); for (let i = 0; i < 4; i++) drops.push(el("circle", { r: 4, fill: "var(--steam)", opacity: 0.8 }, g)); })();
+  const steamPath = $("steamPath"), steamLen = steamPath.getTotalLength();
+
+  // ---------- Simulation loop ----------
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let p = 0, release = 0, angle = 0, spin = 0, pops = 0, t = 0, last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
+    const heatRate = (st.tpd / 100) * (1 - st.m) * 9 + 2;               // bar per second, faster with more and drier fuel
+    if (st.running) {
+      if (release > 0) { release -= dt; p = Math.max(0, p - st.cap * dt * 1.6); spin = Math.min(1, spin + dt * 3); }
+      else { p += heatRate * dt; if (p >= st.cap) { release = 0.6; pops++; $("pops").textContent = pops; } spin = Math.max(0.25, spin - dt * 0.4); }
+    } else { spin = Math.max(0, spin - dt * 0.8); p = Math.max(0, p - dt * 2); release = 0; }
+    angle += spin * dt * 720;
+
+    $("pNow").textContent = p.toFixed(1);
+    const ph = $("phase");
+    if (!st.running) { ph.textContent = "Paused"; ph.className = "pill"; }
+    else if (release > 0) { ph.textContent = "Pop! Steam to turbine"; ph.className = "pill pop"; }
+    else { ph.textContent = "Heating"; ph.className = "pill"; }
+
+    const ga = -120 + Math.min(1, p / 60) * 240;                         // gauge needle, 0–60 bar
+    $("needle").setAttribute("x2", 335 + 16 * Math.sin(ga * Math.PI / 180));
+    $("needle").setAttribute("y2", 140 - 16 * Math.cos(ga * Math.PI / 180));
+    const lift = release > 0 ? Math.sin((0.6 - release) / 0.6 * Math.PI) * 18 : 0;
+    $("cap").setAttribute("transform", `translate(0 ${-lift}) rotate(${release > 0 ? -8 * (lift / 18) : 0} 265 104)`);
+    $("rotor").setAttribute("transform", `translate(510 125) rotate(${angle % 360})`);
+
+    flames.forEach((f, i) => {
+      const x = 212 + i * 20, hgt = st.running ? 18 + 10 * Math.sin(t * 9 + i * 1.7) * (st.tpd / 250 + 0.4) : 4;
+      f.setAttribute("d", `M${x} 300 Q${x + 9} ${300 - hgt * 2} ${x + 18} 300 Z`);
+    });
+    steam.forEach((s, i) => {
+      const k = ((t * 0.9 + i / steam.length) % 1);
+      const on = (release > 0 || spin > 0.5) && st.running;
+      const pt = steamPath.getPointAtLength(k * steamLen);
+      s.setAttribute("cx", pt.x); s.setAttribute("cy", pt.y); s.setAttribute("opacity", on ? 0.8 * (1 - k * 0.4) : 0);
+    });
+    smoke.forEach((s, i) => {
+      const k = ((t * 0.35 + i / smoke.length) % 1);
+      const y = 280 - k * 240;
+      s.setAttribute("cx", 85 + Math.sin(t * 2 + i) * 4 + (k > 0.8 ? (k - 0.8) * 60 : 0));
+      s.setAttribute("cy", y); s.setAttribute("opacity", st.running ? (y < 140 ? 0.15 : 0.45) : 0);
+    });
+    drops.forEach((d, i) => {
+      const k = ((t * 0.5 + i / drops.length) % 1);
+      d.setAttribute("cx", 540); d.setAttribute("cy", 170 + k * 155); d.setAttribute("opacity", st.running ? 0.7 : 0);
+    });
+    const glow = st.running && spin > 0.2;
+    houses.forEach((w, i) => w.setAttribute("fill", glow && i < litCount ? "var(--lit)" : "var(--line)"));
+    $("wire").setAttribute("opacity", glow ? 1 : 0.25);
+
+    if (!reduce) requestAnimationFrame(frame);
+  }
+
+  // ---------- Controls ----------
+  function bind(id, key, conv) { $(id).addEventListener("input", e => { st[key] = conv(e.target.value); render(); }); }
+  bind("tpd", "tpd", Number); bind("moist", "m", Number); bind("cap", "cap", Number); bind("home", "home", Number);
+  $("fuel").addEventListener("change", e => { st.fuel = e.target.value; st.m = FUELS[st.fuel].m; $("moist").value = st.m; render(); });
+  $("runBtn").addEventListener("click", () => { st.running = !st.running; $("runBtn").textContent = st.running ? "Pause plant" : "Start plant"; if (reduce) frame(performance.now()); });
+  $("resetBtn").addEventListener("click", () => {
+    Object.assign(st, { fuel: "eg", tpd: 100, m: 0.18, cap: 20, home: 30, running: true });
+    $("fuel").value = "eg"; $("tpd").value = 100; $("moist").value = 0.18; $("cap").value = 20; $("home").value = 30;
+    $("runBtn").textContent = "Pause plant"; pops = 0; $("pops").textContent = 0; render();
+  });
+
+  $("tpd").value = st.tpd; $("moist").value = st.m; $("cap").value = st.cap; $("home").value = st.home;
+  render();
+  if (reduce) { spin = 1; release = 0.3; frame(performance.now()); } else requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
